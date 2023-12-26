@@ -5,6 +5,7 @@ go 1.21.5
 require (
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-routeros/routeros v0.0.0-20210123142807-2a44d57c6730 // indirect
+	github.com/go-telegram/bot v0.8.3 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/josharian/native v1.1.0 // indirect
