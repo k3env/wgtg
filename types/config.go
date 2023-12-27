@@ -5,12 +5,13 @@ import (
 )
 
 type Config struct {
-	Address  string `mapstructure:"MTWG_API_ADDR"`
-	Port     int    `mapstructure:"MTWG_API_PORT"`
-	User     string `mapstructure:"MTWG_API_USER"`
-	Password string `mapstructure:"MTWG_API_PASS"`
-	BotToken string `mapstructure:"MTWG_TG_TOKEN"`
-	BotAdmin int    `mapstructure:"MTWG_TG_ADMIN"`
+	Address       string `mapstructure:"MTWG_API_ADDR"`
+	Port          int    `mapstructure:"MTWG_API_PORT"`
+	User          string `mapstructure:"MTWG_API_USER"`
+	Password      string `mapstructure:"MTWG_API_PASS"`
+	BotToken      string `mapstructure:"MTWG_TG_TOKEN"`
+	BotAdmin      int    `mapstructure:"MTWG_TG_ADMIN"`
+	PublicAddress string `mapstructure:"MTWG_WG_PUBLIC_IP"`
 }
 
 func LoadConfig(path string) (config Config, err error) {

@@ -8,11 +8,29 @@ import (
 	"strings"
 )
 
-func (api *MikrotikAPI) loadInterfaces() (err error) {
-	publicIp, err := api.getPublicIP()
-	if err != nil {
-		return err
+func (api *MikrotikAPI) loadInterfaces(cfg *types.Config) (err error) {
+	var publicIP = ""
+	if cfg.PublicAddress != "" {
+		if api.logger != nil {
+			api.logger.Printf("Using endpoint address from config: %s", cfg.PublicAddress)
+		}
+		publicIP = cfg.PublicAddress
+	} else {
+		pub, err := api.getPublicIP()
+		if err != nil {
+			return err
+		}
+		publicIP = pub.String()
 	}
+
+	if publicIP == "" {
+		parts := strings.Split(api.apiEndpoint, ":")
+		publicIP = parts[0]
+		if api.logger != nil {
+			api.logger.Printf("No public ip detected, using MikroTIK api IP address")
+		}
+	}
+
 	res, err := api.client.RunArgs([]string{"/interface/wireguard/print"})
 	if err != nil {
 		return err
@@ -36,7 +54,7 @@ func (api *MikrotikAPI) loadInterfaces() (err error) {
 			}
 			continue
 		}
-		err = wgif.SetNetworks(ip, network, publicIp.String())
+		err = wgif.SetNetworks(ip, network, publicIP)
 		if err != nil {
 			if api.logger != nil {
 				api.logger.Printf("Error while parsing %s interface config: %s", wgif.Interface, err)

@@ -21,10 +21,6 @@ type MikrotikAPI struct {
 }
 
 func NewAPI(endpoint string, user string, password string) *MikrotikAPI {
-	//c, err := routeros.Dial(endpoint, user, password)
-	//if err != nil {
-	//	return nil, err
-	//}
 	return &MikrotikAPI{
 		apiEndpoint: endpoint,
 		apiUser:     user,
@@ -51,8 +47,8 @@ func (api *MikrotikAPI) Disconnect() {
 	api.isConnected = false
 }
 
-func (api *MikrotikAPI) Load() (err error) {
-	err = api.loadInterfaces()
+func (api *MikrotikAPI) Load(conf *types.Config) (err error) {
+	err = api.loadInterfaces(conf)
 	if err != nil {
 		return err
 	}
@@ -68,14 +64,8 @@ func (api *MikrotikAPI) BindBot(b *bot.Bot) {
 }
 
 func (api *MikrotikAPI) Unbind(b *bot.Bot) {
-	if api.logger != nil {
-		api.logger.Print("Unbind started")
-	}
 	for _, v := range api.tgBindings {
 		b.UnregisterHandler(v)
-	}
-	if api.logger != nil {
-		api.logger.Print("Unbind finished")
 	}
 }
 
