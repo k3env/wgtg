@@ -14,16 +14,23 @@ type Config struct {
 	PublicAddress string `mapstructure:"MTWG_WG_PUBLIC_IP"`
 }
 
-func LoadConfig(path string) (config Config, err error) {
-	viper.SetConfigFile(path)
+func LoadConfig(path string) (config *Config, err error) {
+	if path != "" {
+		viper.SetConfigFile(path)
+	}
 
 	viper.AutomaticEnv()
 
-	err = viper.ReadInConfig()
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			// Config file not found; ignoring error
+		} else {
+			return nil, err
+		}
+	}
 	if err != nil {
 		return
 	}
-
 	err = viper.Unmarshal(&config)
 	return
 }

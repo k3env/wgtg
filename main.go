@@ -14,13 +14,13 @@ import (
 )
 
 var err error
-var config types.Config
+var config *types.Config
 
 //go:embed all:tmplts
 var tmplts embed.FS
 
 func main() {
-	var cfgFlag = flag.String("config", "app.env", "")
+	var cfgFlag = flag.String("config", "", "")
 	flag.Parse()
 
 	config, err = types.LoadConfig(*cfgFlag)
@@ -39,7 +39,7 @@ func main() {
 	log.Printf("Connected as %s", config.User)
 	defer api.Disconnect()
 
-	err = api.Load(&config)
+	err = api.Load(config)
 	if err != nil {
 		log.Fatal(err)
 	}
