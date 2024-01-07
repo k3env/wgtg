@@ -3,18 +3,18 @@ package api
 import (
 	"fmt"
 	"github.com/k3env/wgtg/errors"
-	"github.com/k3env/wgtg/types"
+	"github.com/k3env/wgtg/wg"
 	"net"
 	"strings"
 )
 
-func (api *MikrotikAPI) loadInterfaces(cfg *types.Config) (err error) {
+func (api *MikrotikAPI) loadInterfaces() (err error) {
 	var publicIP = ""
-	if cfg.PublicAddress != "" {
+	if api.mikrotik.publicAddr != "" {
 		if api.logger != nil {
-			api.logger.Printf("Using endpoint address from config: %s", cfg.PublicAddress)
+			api.logger.Info().Str("address", api.mikrotik.publicAddr).Msg("Using endpoint address from config")
 		}
-		publicIP = cfg.PublicAddress
+		publicIP = api.mikrotik.publicAddr
 	} else {
 		pub, err := api.getPublicIP()
 		if err != nil {
@@ -24,10 +24,10 @@ func (api *MikrotikAPI) loadInterfaces(cfg *types.Config) (err error) {
 	}
 
 	if publicIP == "" {
-		parts := strings.Split(api.apiEndpoint, ":")
+		parts := strings.Split(api.mikrotik.endpoint, ":")
 		publicIP = parts[0]
 		if api.logger != nil {
-			api.logger.Printf("No public ip detected, using MikroTIK api IP address")
+			api.logger.Info().Msg("No public ip detected, using MikroTIK api IP address")
 		}
 	}
 
@@ -39,25 +39,25 @@ func (api *MikrotikAPI) loadInterfaces(cfg *types.Config) (err error) {
 		return errors.NoWGInterfaces
 	}
 	for _, cfg := range res.Re {
-		var wgif types.WGInterface
+		var wgif wg.WGInterface
 		err = wgif.Parse(*cfg)
 		if err != nil {
 			if api.logger != nil {
-				api.logger.Printf("Error while parsing %s interface config: %s", cfg.Map["name"], err)
+				api.logger.Error().Str("interface", cfg.Map["name"]).Err(err).Msg("Error while parsing interface config")
 			}
 			continue
 		}
 		ip, network, err := api.getInterfaceIp(cfg.Map["name"])
 		if err != nil {
 			if api.logger != nil {
-				api.logger.Printf("Error while parsing %s interface config: %s", cfg.Map["name"], err)
+				api.logger.Error().Str("interface", cfg.Map["name"]).Err(err).Msg("Error while parsing interface config")
 			}
 			continue
 		}
 		err = wgif.SetNetworks(ip, network, publicIP)
 		if err != nil {
 			if api.logger != nil {
-				api.logger.Printf("Error while parsing %s interface config: %s", wgif.Interface, err)
+				api.logger.Error().Str("interface", cfg.Map["name"]).Err(err).Msg("Error while parsing interface config")
 			}
 			continue
 		}
@@ -82,7 +82,7 @@ func (api *MikrotikAPI) loadPeers() (err error) {
 			var ip net.IP
 			if len(parts) < 3 {
 				if api.logger != nil {
-					api.logger.Printf("Error while parsing peer comment, skipping")
+					api.logger.Warn().Msg("Error while parsing peer comment, skipping")
 				}
 				continue
 			}
@@ -98,7 +98,7 @@ func (api *MikrotikAPI) loadPeers() (err error) {
 			shared := data["preshared-key"]
 			key := data["public-key"]
 			ipList := strings.Split(data["allowed-address"], ",")
-			wgPeer := &types.WGPeer{
+			wgPeer := &wg.WGPeer{
 				Interface:  api.Interfaces[ifName],
 				Name:       user,
 				IP:         ip,
@@ -113,7 +113,7 @@ func (api *MikrotikAPI) loadPeers() (err error) {
 	return nil
 }
 
-func (api *MikrotikAPI) addNewPeer(wgInterface *types.WGInterface, name string, usePsk bool) (*types.WGPeer, error) {
+func (api *MikrotikAPI) addNewPeer(wgInterface *wg.WGInterface, name string, usePsk bool) (*wg.WGPeer, error) {
 	peer, _ := wgInterface.AddPeer(name, usePsk)
 	cmd := fmt.Sprintf("/interface/wireguard/peers/add =public-key=%s =interface=%s =allowed-address=%s =comment=%s|%s|%s", peer.PublicKey, wgInterface.Interface, strings.Join(peer.AllowedIPs, ","), peer.Name, peer.IP.String(), peer.PrivateKey)
 	args := strings.Split(cmd, " ")

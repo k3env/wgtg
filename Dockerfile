@@ -4,7 +4,7 @@ ADD go.mod .
 COPY . .
 RUN go build -o wgtg main.go
 
-FROM scratch
+FROM alpine
 WORKDIR /app
 COPY --from=builder /build/wgtg /app/wgtg
-CMD ["/app/wgtg"]
+ENTRYPOINT ["/app/wgtg"]

@@ -4,41 +4,56 @@ import (
 	"embed"
 	"github.com/go-routeros/routeros"
 	"github.com/go-telegram/bot"
-	"github.com/k3env/wgtg/types"
-	"log"
+	"github.com/k3env/wgtg/config"
+	"github.com/k3env/wgtg/wg"
+	"github.com/rs/zerolog"
 )
 
 type MikrotikAPI struct {
-	apiEndpoint string
-	apiUser     string
-	apiPass     string
 	client      *routeros.Client
 	isConnected bool
-	logger      *log.Logger
-	Interfaces  map[string]*types.WGInterface
-	tgBindings  map[string]string
+	logger      *zerolog.Logger
+	Interfaces  map[string]*wg.WGInterface
 	fs          embed.FS
+	bot         *botConfig
+	mikrotik    *apiConfig
 }
 
-func NewAPI(endpoint string, user string, password string) *MikrotikAPI {
+type botConfig struct {
+	bindings map[string]string
+	admins   []int64
+	authCode string
+	authType config.BotAuth
+}
+
+type apiConfig struct {
+	endpoint   string
+	user       string
+	password   string
+	publicAddr string
+}
+
+func New() *MikrotikAPI {
 	return &MikrotikAPI{
-		apiEndpoint: endpoint,
-		apiUser:     user,
-		apiPass:     password,
 		client:      nil,
 		isConnected: false,
-		tgBindings:  make(map[string]string),
-		Interfaces:  make(map[string]*types.WGInterface),
+		Interfaces:  make(map[string]*wg.WGInterface),
 	}
 }
 
 func (api *MikrotikAPI) Connect() error {
-	c, err := routeros.Dial(api.apiEndpoint, api.apiUser, api.apiPass)
+	if api.logger != nil {
+		api.logger.Info().Msgf("Connecting to %s", api.mikrotik.endpoint)
+	}
+	c, err := routeros.Dial(api.mikrotik.endpoint, api.mikrotik.user, api.mikrotik.password)
 	if err != nil {
 		return err
 	}
 	api.client = c
 	api.isConnected = true
+	if api.logger != nil {
+		api.logger.Info().Msgf("Connected as %s", api.mikrotik.user)
+	}
 	return nil
 }
 
@@ -47,8 +62,8 @@ func (api *MikrotikAPI) Disconnect() {
 	api.isConnected = false
 }
 
-func (api *MikrotikAPI) Load(conf *types.Config) (err error) {
-	err = api.loadInterfaces(conf)
+func (api *MikrotikAPI) Load() (err error) {
+	err = api.loadInterfaces()
 	if err != nil {
 		return err
 	}
@@ -60,29 +75,20 @@ func (api *MikrotikAPI) Load(conf *types.Config) (err error) {
 }
 
 func (api *MikrotikAPI) BindBot(b *bot.Bot) {
-	api.tgBindings["generate"] = b.RegisterHandler(bot.HandlerTypeMessageText, "/generate", bot.MatchTypePrefix, api.bindingNewPeer)
+	api.bot.bindings["generate"] = b.RegisterHandler(bot.HandlerTypeMessageText, "/generate", bot.MatchTypePrefix, api.middleCheckAuth(api.bindingNewPeer))
+	api.bot.bindings["login"] = b.RegisterHandler(bot.HandlerTypeMessageText, "/login", bot.MatchTypePrefix, api.bindingsLogin)
 }
 
 func (api *MikrotikAPI) Unbind(b *bot.Bot) {
-	for _, v := range api.tgBindings {
+	for _, v := range api.bot.bindings {
 		b.UnregisterHandler(v)
 	}
 }
 
-func (api *MikrotikAPI) WithLogger(logger *log.Logger) *MikrotikAPI {
-	api.logger = logger
-	return api
-}
-
-func (api *MikrotikAPI) WithTemplateFS(fs embed.FS) *MikrotikAPI {
-	api.fs = fs
-	return api
-}
-
-func (api *MikrotikAPI) WithDefaultLogger() *MikrotikAPI {
-	api.logger = log.Default()
-	return api
-}
+/*
+	MikrotikAPI extensions
+	Moved to api/extenstions.go
+*/
 
 /*
 	TG bindings

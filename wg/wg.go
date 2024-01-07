@@ -1,4 +1,4 @@
-package types
+package wg
 
 import (
 	"fmt"
@@ -9,38 +9,6 @@ import (
 	"net"
 	"strconv"
 )
-
-type WGInterface struct {
-	PublicIP    string
-	ListenPort  int
-	LocalSubnet string
-	PublicKey   string
-	Interface   string
-	AllowedIPs  []string
-	Network     *net.IPNet
-	RouterIP    net.IP // Used as base point for client ip allocation
-	Peers       []*WGPeer
-	nextIp      net.IP
-}
-
-func NewInterface(publicIP string, listenPort int, localSubnet string, publicKey string, interfaceName string, allowedIPs []string, network *net.IPNet, routerIP net.IP) (*WGInterface, error) {
-	nextIp, err := util.NextIP(routerIP, 1)
-	if err != nil {
-		return nil, err
-	}
-	return &WGInterface{
-		PublicIP:    publicIP,
-		ListenPort:  listenPort,
-		LocalSubnet: localSubnet,
-		PublicKey:   publicKey,
-		Interface:   interfaceName,
-		AllowedIPs:  allowedIPs,
-		Network:     network,
-		RouterIP:    routerIP,
-		Peers:       make([]*WGPeer, 0),
-		nextIp:      nextIp,
-	}, nil
-}
 
 func (wgif *WGInterface) Parse(row proto.Sentence) error {
 	port, err := strconv.Atoi(row.Map["listen-port"])
@@ -115,16 +83,6 @@ func (wgif *WGInterface) ImportPeer(peer WGPeer) {
 	wgif.nextIp = next
 }
 
-type WGPeer struct {
-	Interface  *WGInterface
-	Name       string
-	IP         net.IP
-	PrivateKey string
-	PublicKey  string
-	SharedKey  string
-	AllowedIPs []string
-}
-
 func (p *WGPeer) ExportConfig() WGConfig {
 	cfg := WGConfig{
 		PrivateKey: p.PrivateKey,
@@ -135,13 +93,4 @@ func (p *WGPeer) ExportConfig() WGConfig {
 		Endpoint:   fmt.Sprintf("%s:%d", p.Interface.PublicIP, p.Interface.ListenPort),
 	}
 	return cfg
-}
-
-type WGConfig struct {
-	PrivateKey string
-	IP         string
-	ServerKey  string
-	SharedKey  string
-	AllowedIPs []string
-	Endpoint   string
 }

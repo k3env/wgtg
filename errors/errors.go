@@ -10,21 +10,21 @@ var InvalidIPError = NewError("Invalid IP address")
 var NoAllocableIPsError = NewError("IP pool is full")
 var NoWGInterfaces = NewError("Wireguard interfaces not found!")
 
-type errorStruct struct {
+type TypeError struct {
 	err  error
 	text string
 }
 
-func NewError(text string) errorStruct {
-	s := errorStruct{
+func NewError(text string) TypeError {
+	s := TypeError{
 		err:  errors.New(strings.ToLower(text)),
 		text: text,
 	}
 	return s
 }
-func (e errorStruct) String() string {
+func (e TypeError) String() string {
 	return e.text
 }
-func (e errorStruct) Error() string {
+func (e TypeError) Error() string {
 	return e.text
 }
